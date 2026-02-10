@@ -22,6 +22,14 @@ class Config:
     USE_TEST_DATA = os.getenv('USE_TEST_DATA', 'false').lower() == 'true'
     
     # Групи тепер визначаються динамічно парсером
+    FALLBACK_GROUPS = [
+        "1.1", "1.2",
+        "2.1", "2.2",
+        "3.1", "3.2",
+        "4.1", "4.2",
+        "5.1", "5.2",
+        "6.1", "6.2",
+    ]
     
     @classmethod
     def validate_token(cls):

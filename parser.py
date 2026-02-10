@@ -107,17 +107,22 @@ class PowerOnParser:
     def get_available_groups(self) -> List[str]:
         html_content = self.fetch_page()
         if not html_content:
-            return []
+            return list(Config.FALLBACK_GROUPS)
         
         soup = BeautifulSoup(html_content, 'lxml')
         text_content = soup.get_text()
         
-        group_pattern = r'Група\s+(\d+\.\d+)\.?\s*Електроенергії\s+немає'
-        matches = re.findall(group_pattern, text_content, re.IGNORECASE | re.UNICODE)
-        
-        groups = sorted(list(set(matches)), key=lambda x: (float(x.split('.')[0]), float(x.split('.')[1])))
-        
-        return groups
+        group_patterns = [
+            r'Група\s+(\d+\.\d+)\.?\s*Електроенергії\s+немає',
+            r'Група\s+(\d+\.\d+)\.?',
+        ]
+
+        matches: List[str] = []
+        for pattern in group_patterns:
+            matches.extend(re.findall(pattern, text_content, re.IGNORECASE | re.UNICODE))
+
+        unique = sorted(set(matches), key=lambda x: (int(x.split('.')[0]), int(x.split('.')[1])))
+        return unique or list(Config.FALLBACK_GROUPS)
     
     def normalize_time_format(self, time_str: str) -> str:
         if ':' not in time_str:
