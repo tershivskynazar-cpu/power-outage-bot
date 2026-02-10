@@ -20,11 +20,12 @@ class PowerOutageBot:
         self.schedule_monitor = ScheduleMonitor(self.data_manager, self.parser)
         
         self.application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
-        self.application.job_queue.run_repeating(
-            self._scheduled_check,
-            interval=Config.CHECK_INTERVAL_MINUTES * 60,
-            first=5,
-        )
+        if self.application.job_queue:
+            self.application.job_queue.run_repeating(
+                self._scheduled_check,
+                interval=Config.CHECK_INTERVAL_MINUTES * 60,
+                first=5,
+            )
         
         self._setup_handlers()
     
