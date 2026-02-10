@@ -26,11 +26,12 @@ class DataManager:
             return False
     
     def set_user_group(self, chat_id: int, group: str) -> bool:
-        if chat_id not in self._data:
-            self._data[chat_id] = {}
+        chat_id_key = str(chat_id)
+        if chat_id_key not in self._data:
+            self._data[chat_id_key] = {}
         
-        self._data[chat_id]['group'] = group
-        self._data[chat_id]['last_schedule'] = []
+        self._data[chat_id_key]['group'] = group
+        self._data[chat_id_key]['last_schedule'] = []
         
         return self._save_data()
     

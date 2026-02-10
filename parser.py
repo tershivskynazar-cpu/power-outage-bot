@@ -59,16 +59,27 @@ class PowerOnParser:
         schedule_data = {}
         
         text_content = soup.get_text()
-        
-        group_pattern = r'Група\s+(\d+\.\d+)\.?\s*Електроенергії\s+немає\s+з\s+([^.]*)\.?'
-        
-        matches = re.findall(group_pattern, text_content, re.IGNORECASE | re.UNICODE)
-        
-        for group, time_str in matches:
-            time_intervals = self._parse_time_intervals(time_str)
-            if time_intervals:
-                schedule_data[group] = time_intervals
-        
+
+        # 1) Robust mode: find group markers and parse time intervals in a window after each marker.
+        # The site text sometimes changes and strict regex below stops matching.
+        group_marker_pattern = r'Група\s+(\d+\.\d+)\.?'
+        for m in re.finditer(group_marker_pattern, text_content, re.IGNORECASE | re.UNICODE):
+            group = m.group(1)
+            window = text_content[m.end(): m.end() + 400]
+            intervals = self._parse_time_intervals(window)
+            if intervals:
+                schedule_data[group] = intervals
+
+        # 2) Fallback to strict mode if robust mode found nothing.
+        if not schedule_data:
+            group_pattern = r'Група\s+(\d+\.\d+)\.?\s*Електроенергії\s+немає\s+з\s+([^.]*)\.?'
+            matches = re.findall(group_pattern, text_content, re.IGNORECASE | re.UNICODE)
+
+            for group, time_str in matches:
+                time_intervals = self._parse_time_intervals(time_str)
+                if time_intervals:
+                    schedule_data[group] = time_intervals
+
         return schedule_data
     
     def _parse_time_intervals(self, time_str: str) -> List[List[str]]:

@@ -20,6 +20,11 @@ class PowerOutageBot:
         self.schedule_monitor = ScheduleMonitor(self.data_manager, self.parser)
         
         self.application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
+        self.application.job_queue.run_repeating(
+            self._scheduled_check,
+            interval=Config.CHECK_INTERVAL_MINUTES * 60,
+            first=5,
+        )
         
         self._setup_handlers()
     
@@ -324,6 +329,23 @@ class PowerOutageBot:
             )
         except Exception as e:
             pass
+
+    async def _scheduled_check(self, context: ContextTypes.DEFAULT_TYPE):
+        users = self.data_manager.get_all_users()
+
+        for chat_id_str, user_data in users.items():
+            try:
+                chat_id = int(chat_id_str)
+                user_group = user_data.get('group')
+                if not user_group:
+                    continue
+
+                changes = await self.schedule_monitor.check_user_schedule(chat_id, user_group)
+                if changes:
+                    message = f"⚠️ *Зміни в графіку групи {user_group}:*\n\n{changes}"
+                    await self.send_notification(chat_id, message)
+            except Exception:
+                pass
     
     def run(self):
         self.application.run_polling(drop_pending_updates=True)
