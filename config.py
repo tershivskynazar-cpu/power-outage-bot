@@ -4,10 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-    
-    if not TELEGRAM_BOT_TOKEN:
-        raise ValueError("TELEGRAM_BOT_TOKEN не знайдено в змінних середовища!")
+    TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
     
     POWERON_URL = "https://poweron.loe.lviv.ua/"
     
@@ -25,3 +22,10 @@ class Config:
     USE_TEST_DATA = os.getenv('USE_TEST_DATA', 'false').lower() == 'true'
     
     # Групи тепер визначаються динамічно парсером
+    
+    @classmethod
+    def validate_token(cls):
+        if not cls.TELEGRAM_BOT_TOKEN:
+            print("⚠️ TELEGRAM_BOT_TOKEN не знайдено! Бот не працюватиме без токена.")
+            return False
+        return True
