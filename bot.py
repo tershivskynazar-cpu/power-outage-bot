@@ -326,8 +326,6 @@ class PowerOutageBot:
             pass
     
     def run(self):
-        self.schedule_monitor.start_monitoring(self)
-        
         self.application.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
