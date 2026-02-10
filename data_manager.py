@@ -14,7 +14,6 @@ class DataManager:
                 with open(self.data_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except (json.JSONDecodeError, IOError) as e:
-                print(f"Помилка завантаження даних: {e}")
                 return {}
         return {}
     
@@ -24,7 +23,6 @@ class DataManager:
                 json.dump(self._data, f, ensure_ascii=False, indent=2)
             return True
         except IOError as e:
-            print(f"Помилка збереження даних: {e}")
             return False
     
     def set_user_group(self, chat_id: int, group: str) -> bool:

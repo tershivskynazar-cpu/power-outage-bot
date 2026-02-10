@@ -48,7 +48,6 @@ class PowerOnParser:
             
             return response.text
         except requests.exceptions.RequestException as e:
-            print(f"Помилка завантаження сторінки: {e}")
             return None
     
     def parse_schedule(self, html_content: str) -> Dict[str, List[List[str]]]:

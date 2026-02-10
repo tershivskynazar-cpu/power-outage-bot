@@ -167,8 +167,6 @@ class PowerOutageBot:
         user_id = update.effective_chat.id
         callback_data = query.data
         
-        print(f"Button clicked: {callback_data} by user {user_id}")
-        
         if callback_data.startswith("group_"):
             group = callback_data.replace("group_", "")
             
@@ -214,16 +212,11 @@ class PowerOutageBot:
                 await query.edit_message_text("❌ Невідома група. Спробуйте ще раз.")
         
         elif callback_data == "cmd_status":
-            print(f"Status button clicked by user {user_id}")
             await self._handle_status_command(query, user_id)
         elif callback_data == "cmd_check":
-            print(f"Check button clicked by user {user_id}")
             await self._handle_check_command(query, user_id)
         elif callback_data == "cmd_group":
-            print(f"Group button clicked by user {user_id}")
             await self._handle_group_command(query, user_id)
-        else:
-            print(f"Unknown callback data: {callback_data}")
     
     async def _handle_status_command(self, query, user_id: int):
         user_group = self.data_manager.get_user_group(user_id)
@@ -330,7 +323,7 @@ class PowerOutageBot:
                 parse_mode='Markdown'
             )
         except Exception as e:
-            logger.error(f"Помилка надсилання повідомлення користувачу {user_id}: {e}")
+            pass
     
     async def run(self):
         await self.schedule_monitor.start_monitoring(self)

@@ -1,12 +1,9 @@
 import asyncio
-import logging
 from typing import List, Optional, Dict
 from datetime import datetime
 from data_manager import DataManager
 from parser import PowerOnParser
 from config import Config
-
-logger = logging.getLogger(__name__)
 
 class ScheduleMonitor:
     def __init__(self, data_manager: DataManager, parser: PowerOnParser):
@@ -20,7 +17,6 @@ class ScheduleMonitor:
         self.bot = bot
         self._stop_event.clear()
         self._monitoring_task = asyncio.create_task(self._monitor_loop())
-        logger.info("Моніторинг графіків запущено")
     
     async def stop_monitoring(self):
         self._stop_event.set()
@@ -30,7 +26,6 @@ class ScheduleMonitor:
                 await self._monitoring_task
             except asyncio.CancelledError:
                 pass
-        logger.info("Моніторинг графіків зупинено")
     
     async def _monitor_loop(self):
         while not self._stop_event.is_set():
@@ -40,7 +35,6 @@ class ScheduleMonitor:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Помилка в циклі моніторингу: {e}")
                 await asyncio.sleep(60)
     
     async def _check_all_users(self):
@@ -61,7 +55,7 @@ class ScheduleMonitor:
                     await self.bot.send_notification(chat_id, message)
                     
             except Exception as e:
-                logger.error(f"Помилка перевірки користувача {chat_id_str}: {e}")
+                pass
     
     async def check_user_schedule(self, chat_id: int, group: str) -> Optional[str]:
         try:
@@ -85,7 +79,6 @@ class ScheduleMonitor:
             return None
             
         except Exception as e:
-            logger.error(f"Помилка перевірки графіка для групи {group}: {e}")
             return None
     
     def _schedules_equal(self, schedule1: List[List[str]], schedule2: List[List[str]]) -> bool:
