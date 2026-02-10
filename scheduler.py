@@ -13,9 +13,10 @@ class ScheduleMonitor:
         self._monitoring_task = None
         self._stop_event = asyncio.Event()
     
-    async def start_monitoring(self, bot):
+    def start_monitoring(self, bot):
         self.bot = bot
         self._stop_event.clear()
+        import asyncio
         self._monitoring_task = asyncio.create_task(self._monitor_loop())
     
     async def stop_monitoring(self):

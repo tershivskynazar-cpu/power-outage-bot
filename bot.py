@@ -325,24 +325,11 @@ class PowerOutageBot:
         except Exception as e:
             pass
     
-    async def run(self):
-        await self.schedule_monitor.start_monitoring(self)
+    def run(self):
+        self.schedule_monitor.start_monitoring(self)
         
-        async with self.application:
-            await self.application.start()
-            await self.application.updater.start_polling(drop_pending_updates=True)
-            
-            try:
-                while True:
-                    await asyncio.sleep(1)
-            except asyncio.CancelledError:
-                pass
-            finally:
-                await self.schedule_monitor.stop_monitoring()
-                await self.application.updater.stop()
-                await self.application.stop()
+        self.application.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
-    import asyncio
     bot = PowerOutageBot()
-    asyncio.run(bot.run())
+    bot.run()
