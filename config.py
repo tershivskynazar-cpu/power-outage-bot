@@ -7,6 +7,10 @@ class Config:
     TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
     
     POWERON_URL = "https://poweron.loe.lviv.ua/"
+    LOE_API_BASE_URL = "https://api.loe.lviv.ua"
+    LOE_API_PREFIX = "/api"
+    LOE_API_SCHEDULE_MENU_TYPE = "photo-grafic"
+    LOE_API_GROUPS_MENU_TYPE = "power-group"
     
     CHECK_INTERVAL_MINUTES = 10
     

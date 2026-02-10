@@ -30,11 +30,50 @@ class PowerOnParser:
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
         })
+
+    def _fetch_api_schedule_html(self) -> Optional[str]:
+        try:
+            url = (
+                f"{Config.LOE_API_BASE_URL}{Config.LOE_API_PREFIX}/menus"
+                f"?page=1&type={Config.LOE_API_SCHEDULE_MENU_TYPE}"
+            )
+            resp = self.session.get(url, timeout=Config.REQUEST_TIMEOUT)
+            resp.raise_for_status()
+
+            data = resp.json()
+            members = data.get("hydra:member") or []
+            if not members:
+                return None
+
+            menu = members[0]
+            items = menu.get("menuItems") or []
+            if not items:
+                return None
+
+            # Prefer the entry named 'Today' if present, otherwise first item.
+            today = None
+            for it in items:
+                if str(it.get("name", "")).strip().lower() == "today":
+                    today = it
+                    break
+
+            item = today or items[0]
+            raw_html = item.get("rawHtml") or item.get("rawMobileHtml")
+            if isinstance(raw_html, str) and raw_html.strip():
+                return raw_html
+
+            return None
+        except Exception:
+            return None
     
     def fetch_page(self) -> Optional[str]:
         if Config.USE_TEST_DATA:
             from test_data import TEST_SCHEDULE_DATA
             return TEST_SCHEDULE_DATA
+
+        api_html = self._fetch_api_schedule_html()
+        if api_html:
+            return api_html
         
         try:
             response = self.session.get(
@@ -57,20 +96,29 @@ class PowerOnParser:
         soup = BeautifulSoup(html_content, 'lxml')
         
         schedule_data = {}
-        
-        text_content = soup.get_text()
 
-        # 1) Robust mode: find group markers and parse time intervals in a window after each marker.
-        # The site text sometimes changes and strict regex below stops matching.
-        group_marker_pattern = r'Група\s+(\d+\.\d+)\.?'
-        for m in re.finditer(group_marker_pattern, text_content, re.IGNORECASE | re.UNICODE):
+        # LOE API `rawHtml` sometimes has multiple groups concatenated in one block.
+        # Parse by splitting the plain text into per-group chunks.
+        text_content = soup.get_text(" ", strip=True)
+        if not text_content:
+            return {}
+
+        group_chunk_pattern = re.compile(
+            r'(Група\s+\d+\.\d+\.?\s*.*?)(?=\s*Група\s+\d+\.\d+\.?\s*|$)',
+            re.IGNORECASE | re.UNICODE | re.DOTALL,
+        )
+
+        for chunk in group_chunk_pattern.findall(text_content):
+            m = re.search(r'Група\s+(\d+\.\d+)\.?', chunk, re.IGNORECASE | re.UNICODE)
+            if not m:
+                continue
+
             group = m.group(1)
-            window = text_content[m.end(): m.end() + 400]
-            intervals = self._parse_time_intervals(window)
+            intervals = self._parse_time_intervals(chunk)
             if intervals:
                 schedule_data[group] = intervals
 
-        # 2) Fallback to strict mode if robust mode found nothing.
+        # Fallback: strict pattern
         if not schedule_data:
             group_pattern = r'Група\s+(\d+\.\d+)\.?\s*Електроенергії\s+немає\s+з\s+([^.]*)\.?'
             matches = re.findall(group_pattern, text_content, re.IGNORECASE | re.UNICODE)
@@ -116,13 +164,19 @@ class PowerOnParser:
         return self.parse_schedule(html_content)
     
     def get_available_groups(self) -> List[str]:
+        schedules = self.get_all_schedules()
+        if schedules:
+            keys = sorted(schedules.keys(), key=lambda x: (int(x.split('.')[0]), int(x.split('.')[1])))
+            if keys:
+                return keys
+
         html_content = self.fetch_page()
         if not html_content:
             return list(Config.FALLBACK_GROUPS)
-        
+
         soup = BeautifulSoup(html_content, 'lxml')
         text_content = soup.get_text()
-        
+
         group_patterns = [
             r'Група\s+(\d+\.\d+)\.?\s*Електроенергії\s+немає',
             r'Група\s+(\d+\.\d+)\.?',
