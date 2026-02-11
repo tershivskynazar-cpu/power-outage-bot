@@ -12,6 +12,7 @@ class ScheduleMonitor:
         self.bot = None
         self._monitoring_task = None
         self._stop_event = asyncio.Event()
+        self._required_confirmations = 2
     
     def start_monitoring(self, bot):
         self.bot = bot
@@ -61,23 +62,40 @@ class ScheduleMonitor:
     async def check_user_schedule(self, chat_id: int, group: str) -> Optional[str]:
         try:
             current_schedule = self.parser.get_group_schedule(group)
-            
+
+            # If we couldn't fetch/parse current schedule (transient error), do NOT treat it as a change
+            # and do NOT overwrite the saved schedule.
             if current_schedule is None:
-                saved_schedule = self.data_manager.get_user_schedule(chat_id)
-                if saved_schedule:
-                    self.data_manager.update_user_schedule(chat_id, [])
-                    return "❌ *Графік зник зі сторінки*\n\nВідключення відсутні на сайті."
                 return None
             
             current_schedule_normalized = self.parser.normalize_schedule(current_schedule)
             saved_schedule = self.data_manager.get_user_schedule(chat_id)
             saved_schedule_normalized = self.parser.normalize_schedule(saved_schedule)
-            
-            if not self._schedules_equal(current_schedule_normalized, saved_schedule_normalized):
-                self.data_manager.update_user_schedule(chat_id, current_schedule_normalized)
-                return self._format_changes_message(current_schedule_normalized, saved_schedule_normalized)
-            
-            return None
+
+            # If same as saved -> clear any pending change confirmation and do nothing.
+            if self._schedules_equal(current_schedule_normalized, saved_schedule_normalized):
+                self.data_manager.clear_pending_change(chat_id)
+                return None
+
+            # Debounce: require the same changed schedule to be observed multiple times in a row
+            pending_schedule = self.data_manager.get_pending_schedule(chat_id)
+            pending_count = self.data_manager.get_pending_count(chat_id)
+
+            if pending_schedule == current_schedule_normalized:
+                pending_count += 1
+            else:
+                pending_schedule = current_schedule_normalized
+                pending_count = 1
+
+            self.data_manager.set_pending_change(chat_id, pending_schedule, pending_count)
+
+            if pending_count < self._required_confirmations:
+                return None
+
+            # Confirmed change -> persist and notify
+            self.data_manager.update_user_schedule(chat_id, current_schedule_normalized)
+            self.data_manager.clear_pending_change(chat_id)
+            return self._format_changes_message(current_schedule_normalized, saved_schedule_normalized)
             
         except Exception as e:
             return None

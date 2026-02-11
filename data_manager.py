@@ -32,6 +32,8 @@ class DataManager:
         
         self._data[chat_id_key]['group'] = group
         self._data[chat_id_key]['last_schedule'] = []
+        self._data[chat_id_key]['pending_schedule'] = None
+        self._data[chat_id_key]['pending_count'] = 0
         
         return self._save_data()
     
@@ -47,6 +49,23 @@ class DataManager:
     
     def get_user_schedule(self, chat_id: int) -> List[List[str]]:
         return self._data.get(str(chat_id), {}).get('last_schedule', [])
+
+    def get_pending_schedule(self, chat_id: int):
+        return self._data.get(str(chat_id), {}).get('pending_schedule')
+
+    def get_pending_count(self, chat_id: int) -> int:
+        return int(self._data.get(str(chat_id), {}).get('pending_count', 0) or 0)
+
+    def set_pending_change(self, chat_id: int, pending_schedule, pending_count: int) -> bool:
+        if str(chat_id) not in self._data:
+            self._data[str(chat_id)] = {}
+
+        self._data[str(chat_id)]['pending_schedule'] = pending_schedule
+        self._data[str(chat_id)]['pending_count'] = pending_count
+        return self._save_data()
+
+    def clear_pending_change(self, chat_id: int) -> bool:
+        return self.set_pending_change(chat_id, None, 0)
     
     def get_all_users(self) -> Dict:
         return self._data
